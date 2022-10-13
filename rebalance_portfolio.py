@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+import argparse
 import sys
 
 RJMAX = 11 # Default, e.g. formats correctly up to $100,000.00
@@ -30,36 +31,37 @@ def optimal_add_others(fund_num, add_funds, owned, percs):
     # Expression derived by hand
     return owned[fund_num] * sum_percs / percs[fund_num] - sum_amount
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Rebalance a Vanguard three or four-fund portfolio.')
+    parser.add_argument('add', type=float, help="Amount to add to portfolio")
+    parser.add_argument('vtsax', type=float, help="VTSAX amount owned")
+    parser.add_argument('vtiax', type=float, help="VTIAX amount owned")
+    parser.add_argument('vbtlx', type=float, help="VBTLX amount owned")
+    parser.add_argument('vtibx', type=float, help="VTIBX amount owned")
+    parser.add_argument('--vtsax-desired', type=float, default=0.535, help="VTSAX amount desired")
+    parser.add_argument('--vtiax-desired', type=float, default=0.362, help="VTIAX amount desired")
+    parser.add_argument('--vbtlx-desired', type=float, default=0.071, help="VBTLX amount desired")
+    parser.add_argument('--vtibx-desired', type=float, default=0.032, help="VTIBX amount desired")
+    parser.add_argument('--no-vtibx', action='store_true', help="exclude VTIBX from consideration")
+
+    return parser.parse_args()
+
 def main():
     global RJMAX, DOLLAR_PAD
 
-    if len(sys.argv) < 6:
-        print("rebalance.py adding fund1 fund2 fund3 fund4 no_int")
-        sys.exit(1)
-
     # Currently these are targeting the VFFVX Vanguard Target Retirement 2055 Fund, and may need to be changed manually on each rebalance.
-    domestic_stock = 0.535
-    international_stock = 0.362
-    domestic_bonds = 0.0710
-    international_bonds = 0.0320
+    args = parse_args()
 
-    added = float(sys.argv[1].strip().replace(",","").replace("$",""))
-    owned = list(map(lambda input_owned: float(input_owned.strip().replace(",","").replace("$","")), sys.argv[2:6]))
+    added = args.add
 
-    if len(sys.argv) == 7:
-        # Where international bond fund minimum ($3k) is not met
-        domestic_bonds = domestic_bonds + international_bonds
-        international_bonds = 0
-
-    funds = ["VTSAX", "VTIAX", "VBTLX", "VTIBX"]
-    percs = [domestic_stock, international_stock, domestic_bonds, international_bonds]
-
-    # Remove international bonds, if argument was applied
-    for i in range(len(percs)):
-        if not percs[i]:
-            funds.pop(i)
-            percs.pop(i)
-            owned.pop(i)
+    if args.no_vtibx:
+        percs = [args.vtsax_desired, args.vtiax_desired, args.vbtlx_desired + args.vtibx_desired]
+        owned = [args.vtsax, args.vtiax, args.vbtlx]
+        funds = ["VTSAX", "VTIAX", "VBTLX"]
+    else:
+        percs = [args.vtsax_desired, args.vtiax_desired, args.vbtlx_desired, args.vtibx_desired]
+        owned = [args.vtsax, args.vtiax, args.vbtlx, args.vtibx]
+        funds = ["VTSAX", "VTIAX", "VBTLX", "VTIBX"]
 
     funds_str = "".join(map(lambda x: x.rjust(RJMAX), funds))
     percs_str = "".join(map(lambda x: format_perc(x), percs))

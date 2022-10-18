@@ -145,10 +145,7 @@ def main():
         if opt_oth > minimum_nosell_add_amount:
             minimum_nosell_add_amount = opt_oth
 
-        if current_total:
-            ratio = fund_owned / current_total
-        else:
-            ratio = 0
+        ratio = fund_owned / current_total if current_total else 0
 
         deviation = ratio / percs[fund_num]
 
@@ -181,32 +178,34 @@ def main():
                 "owned:", format_dollar(owned[fund_num]), \
                 "  Add or sell:", format_dollar(opt_this))
 
-    print()
-    print("Scheme for only buying funds for a rebalance:")
-    print()
-
-    owned_plus_added = list()
-    for i, v in enumerate(owned):
-        owned_plus_added.append(v + add_to_each[i])
-
-    suboptimal = False
-
-    for fund_num,fund_owned in enumerate(owned_plus_added):
-        ratio = fund_owned / (current_total + added)
-
-        deviation = ratio / percs[fund_num]
-
-        if deviation != 1.0:
-            suboptimal = True
-
-        print("Fund", funds[fund_num],\
-            "owned:", format_dollar(fund_owned),\
-            "  To add:", format_dollar(add_to_each[fund_num]), \
-            "  Ratio:", format_perc(ratio), \
-            "  Deviation:", format_perc(deviation))
-
-    if suboptimal:
+    if added > 0:
         print()
-        print("Buy-only rebalance is suboptimal")
+        # TODO: Add sell-only rebalance
+        print("Scheme for only buying funds for a rebalance:")
+        print()
+
+        owned_plus_added = list()
+        for i, v in enumerate(owned):
+            owned_plus_added.append(v + add_to_each[i])
+
+        suboptimal = False
+
+        for fund_num, fund_owned in enumerate(owned_plus_added):
+            ratio = fund_owned / (current_total + added) if current_total + added else 0
+
+            deviation = ratio / percs[fund_num]
+
+            if deviation != 1.0:
+                suboptimal = True
+
+            print("Fund", funds[fund_num],\
+                "owned:", format_dollar(fund_owned),\
+                "  To add:", format_dollar(add_to_each[fund_num]), \
+                "  Ratio:", format_perc(ratio), \
+                "  Deviation:", format_perc(deviation))
+
+        if suboptimal:
+            print()
+            print("Buy-only rebalance is suboptimal")
 
 main()

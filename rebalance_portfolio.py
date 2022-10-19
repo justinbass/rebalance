@@ -4,7 +4,7 @@ import sys
 
 RIGHT_JUST_MAX = 11  # Default, e.g. formats correctly up to $100,000.00
 DOLLAR_PAD = 5  # In format_dollar, add 5 spaces for padding dollar sign, negative, and cents: "$", "-" ".56"
-
+FLOAT_THRESHOLD = 0.01
 
 def format_dollar(n, rj=RIGHT_JUST_MAX):
     if n >= 0:
@@ -52,6 +52,60 @@ def parse_args():
     return parser.parse_args()
 
 
+def rebalance(owned, added_remaining, all_funds, percentages):
+    # TODO: Selling-only not yet supported
+
+    add_to_each = list()
+    for i in range(len(owned)):
+        add_to_each.append(0)
+
+    # Main step loop
+    for step in range(len(owned)):
+        if abs(added_remaining) < FLOAT_THRESHOLD:
+            break
+
+        # Find owned plus added in the current step
+        owned_plus_added = list()
+        for i, v in enumerate(owned):
+            owned_plus_added.append(v + add_to_each[i])
+
+        # For each fund, find the amounts that would need to be added to all other funds
+        # in order to make each fund equally weighted to all others.
+        opt_adds = list()
+        for fund_num, fund_owned in enumerate(owned):
+            opt_adds.append((fund_num, optimal_add_others(fund_num, all_funds, owned_plus_added, percentages)))
+
+        # Find the two smallest such unique numbers, and the two or more funds associated
+        opt_adds.sort(key=lambda x: x[1])
+
+        lowest_opt_add_others = opt_adds[0][1]
+        funds_list = [opt_adds[0][0]]
+        next_fund = -1
+        for fund_num, opt_add_others in opt_adds[1:]:
+            if opt_add_others - lowest_opt_add_others > FLOAT_THRESHOLD:
+                next_fund = fund_num
+                break
+
+            funds_list.append(fund_num)
+
+        # Find the optimal amount to add to the given funds_list to make the deviations
+        # from proportion equal across all funds in that list. If there is not enough
+        # added to get to the ideal proportion deviations, then set the amount added to each
+        # fund proportional to the actual maximum amount able to be added.
+        to_add = optimal_add_others(next_fund, funds_list + [next_fund], owned_plus_added, percentages)
+
+        if to_add > added_remaining or to_add < FLOAT_THRESHOLD:
+            to_add = added_remaining
+
+        for fund_num in funds_list:
+            opt_add = optimal_add(to_add, fund_num, funds_list, owned_plus_added, percentages)
+            add_to_each[fund_num] += opt_add
+
+        # Subtract the current amount added in this step from the total amount remaining
+        added_remaining -= to_add
+
+    return add_to_each
+
 def main():
     global RIGHT_JUST_MAX, DOLLAR_PAD
 
@@ -87,57 +141,7 @@ def main():
 
     # Initialize values
     all_funds = range(len(owned))
-    float_threshold = 0.01
-    added_remaining = added
-    add_to_each = list()
-    for i in range(len(owned)):
-        add_to_each.append(0)
-
-    # Main step loop
-    for step in range(len(owned)):
-        # TODO: Selling not yet supported
-        if abs(added_remaining) < float_threshold:
-            break
-
-        # Find owned plus added in the current step
-        owned_plus_added = list()
-        for i, v in enumerate(owned):
-            owned_plus_added.append(v + add_to_each[i])
-
-        # For each fund, find the amounts that would need to be added to all other funds
-        # in order to make each fund equally weighted to all others.
-        opt_adds = list()
-        for fund_num, fund_owned in enumerate(owned):
-            opt_adds.append((fund_num, optimal_add_others(fund_num, all_funds, owned_plus_added, percentages)))
-
-        # Find the two smallest such unique numbers, and the two or more funds associated
-        opt_adds.sort(key=lambda x: x[1])
-
-        lowest_opt_add_others = opt_adds[0][1]
-        funds_list = [opt_adds[0][0]]
-        next_fund = -1
-        for fund_num, opt_add_others in opt_adds[1:]:
-            if opt_add_others - lowest_opt_add_others > float_threshold:
-                next_fund = fund_num
-                break
-
-            funds_list.append(fund_num)
-
-        # Find the optimal amount to add to the given funds_list to make the deviations
-        # from proportion equal across all funds in that list. If there is not enough
-        # added to get to the ideal proportion deviations, then set the amount added to each
-        # fund proportional to the actual maximum amount able to be added.
-        to_add = optimal_add_others(next_fund, funds_list + [next_fund], owned_plus_added, percentages)
-
-        if to_add > added_remaining or to_add < float_threshold:
-            to_add = added_remaining
-
-        for fund_num in funds_list:
-            opt_add = optimal_add(to_add, fund_num, funds_list, owned_plus_added, percentages)
-            add_to_each[fund_num] += opt_add
-
-        # Subtract the current amount added in this step from the total amount remaining
-        added_remaining -= to_add
+    add_to_each = rebalance(owned, added, all_funds, percentages)
 
     # Stats before
     print("Current portfolio:")
@@ -154,9 +158,9 @@ def main():
 
         deviation = ratio / percentages[fund_num]
 
-        print("Fund", funds[fund_num], \
-              "owned:", format_dollar(owned[fund_num]), \
-              "  Ratio:", format_perc(ratio), \
+        print("Fund", funds[fund_num],
+              "owned:", format_dollar(owned[fund_num]),
+              "  Ratio:", format_perc(ratio),
               "  Deviation:", format_perc(deviation))
 
     print("Total: " + format_dollar(current_total))
@@ -177,14 +181,11 @@ def main():
             if opt_oth > minimum_no_sell_add_amount:
                 minimum_no_sell_add_amount = opt_oth
 
-            deviation = fund_owned / (current_total * percentages[fund_num])
-
             print("Fund", funds[fund_num],
                   "owned:", format_dollar(owned[fund_num]),
                   "  Add or sell:", format_dollar(opt_this))
 
     if added > 0:
-        # TODO: Add sell-only rebalance
         print()
         print("Scheme for only buying funds for a rebalance:")
         print()

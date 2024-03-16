@@ -6,7 +6,7 @@
 owned = [50000.00, 30000.00, 6000.00, 3000.00]
 
 # Fund ratio desired (https://investor.vanguard.com/investment-products/mutual-funds/profile/vffvx#portfolio-composition)
-desired = [0.5420, 0.3600, 0.069, 0.029]
+desired = [54.20 / 100, 36.00 / 100, 6.9 / 100, 2.9 / 100]
 
 # Amount to add to portfolio (if exchanging existing funds, this is 0)
 add = 0

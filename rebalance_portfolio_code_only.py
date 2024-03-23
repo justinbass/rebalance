@@ -3,7 +3,7 @@
 ################################################################################
 
 # Funds owned
-owned = ["50,000.00", "30,000.00", "6,000.00", "3,000.00"]
+owned = ["$50,000.00", "$30,000.00", "$6,000.00", "$3,000.00"]
 
 # Fund ratio desired (https://investor.vanguard.com/investment-products/mutual-funds/profile/vffvx#portfolio-composition)
 desired = [54.20 / 100, 36.00 / 100, 6.9 / 100, 2.9 / 100]
@@ -27,7 +27,7 @@ DOLLAR_PAD = 5
 FLOAT_THRESHOLD = 0.01
 
 # Format owned
-owned = [float(o.replace(",", "")) for o in owned]
+owned = [float(o.replace(",", "").replace("$", "")) for o in owned]
 
 def format_dollar(n, rj=RIGHT_JUST_MAX):
     if n >= 0:

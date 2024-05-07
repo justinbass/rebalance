@@ -1,6 +1,22 @@
-#!/usr/bin/python3
-import argparse
-import sys
+################################################################################
+# Change these
+################################################################################
+
+# Funds owned
+owned = ["$50,000.00", "$30,000.00", "$6,000.00", "$3,000.00"]
+
+# Fund ratio desired (https://investor.vanguard.com/investment-products/mutual-funds/profile/vffvx#portfolio-composition)
+desired = [54.20 / 100, 36.00 / 100, 6.9 / 100, 2.9 / 100]
+
+# Amount to add to portfolio (if exchanging existing funds, this is 0)
+add = 1000
+
+# Fund ticker names
+names = ["VTSAX", "VTIAX", "VBTLX", "VTABX"]
+
+################################################################################
+# Change these
+################################################################################
 
 # Default, e.g. formats correctly up to $9,999,999.99
 RIGHT_JUST_MAX = 14
@@ -10,6 +26,8 @@ DOLLAR_PAD = 5
 
 FLOAT_THRESHOLD = 0.01
 
+# Format owned
+owned = [float(o.replace(",", "").replace("$", "")) for o in owned]
 
 def format_dollar(n, rj=RIGHT_JUST_MAX):
     if n >= 0:
@@ -44,25 +62,8 @@ def optimal_add_others(fund_num, add_funds, owned, percentages):
     return owned[fund_num] * sum_percentages / percentages[fund_num] - sum_amount
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Rebalance a portfolio.')
-    parser.add_argument('--add', type=float, help="Amount to add to portfolio", required=True)
-    parser.add_argument('--owned', nargs='+', type=float, help="Funds owned", required=True)
-    parser.add_argument('--desired', nargs='+', type=float, help="Fund ratio desired", required=True)
-    parser.add_argument('--names', nargs='+', type=str, help="Fund ticker names", required=True)
-
-    return parser.parse_args()
-
-
 def main():
     global RIGHT_JUST_MAX, DOLLAR_PAD
-
-    args = parse_args()
-
-    add = args.add
-    owned = args.owned
-    desired = args.desired
-    names = args.names
 
     funds_str = "".join(map(lambda x: x.rjust(RIGHT_JUST_MAX), names))
     percentages_str = "".join(map(lambda x: format_percentage(x), desired))
@@ -79,7 +80,7 @@ def main():
 
     if add < - current_total:
         print("You do not have enough money to withdraw the desired amount")
-        sys.exit(1)
+        return
 
     # Initialize values
     all_funds = range(len(owned))
